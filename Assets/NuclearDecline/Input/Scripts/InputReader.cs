@@ -1,39 +1,49 @@
 using System;
-using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace NuclearDecline.Input
 {
-    public class InputReader : MonoBehaviour
+    public partial class InputReader
     {
-        [SerializeField] private InputActionAsset _inputActions;
+        private readonly InputActionAsset _inputActions;
 
-        public event Action<InputAction.CallbackContext> ActionTriggered;
+        public event Action<InputAction.CallbackContext> Triggered;
 
-        private void OnEnable()
+        public InputReader(InputActionAsset inputActions)
         {
-            foreach (var action in _inputActions)
+            _inputActions = inputActions;
+        }
+
+        public void EnableMap(string name)
+        {
+            foreach (InputActionMap map in _inputActions.actionMaps)
             {
-                action.performed += OnActionTriggered;
+                if (map.name == name)
+                {
+                    map.Enable();
+                    map.actionTriggered += OnTriggered;
+                    return;
+                }
             }
         }
 
-        private void OnDisable()
+        public void DisableMap(string name)
         {
-            foreach (var action in _inputActions)
+            foreach (InputActionMap map in _inputActions.actionMaps)
             {
-                action.performed -= OnActionTriggered;
+                if (map.name == name)
+                {
+                    map.Disable();
+                    map.actionTriggered -= OnTriggered;
+                    return;
+                }
             }
         }
 
-        private void OnActionTriggered(InputAction.CallbackContext context)
+        private void OnTriggered(InputAction.CallbackContext context)
         {
-            if (context.action.name == "Attack")
-            {
-                Debug.Log("!!!");
-            }
+            Triggered?.Invoke(context);
         }
     }
-
 }
 
