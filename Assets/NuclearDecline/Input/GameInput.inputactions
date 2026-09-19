@@ -43,7 +43,7 @@
                     "path": "<Mouse>/leftButton",
                     "interactions": "",
                     "processors": "",
-                    "groups": ";Keyboard and mosue",
+                    "groups": "KeyboardAndMouse",
                     "action": "Shoot",
                     "isComposite": false,
                     "isPartOfComposite": false
@@ -64,8 +64,8 @@
     ],
     "controlSchemes": [
         {
-            "name": "Keyboard and mosue",
-            "bindingGroup": "Keyboard and mosue",
+            "name": "KeyboardAndMouse",
+            "bindingGroup": "KeyboardAndMouse",
             "devices": [
                 {
                     "devicePath": "<Keyboard>",

@@ -3,46 +3,26 @@ using UnityEngine.InputSystem;
 
 namespace NuclearDecline.Input
 {
-    public partial class InputReader
+    public class InputReader : IDisposable
     {
-        private readonly InputActionAsset _inputActions;
+        private readonly PlayerInput _playerInput;
 
         public event Action<InputAction.CallbackContext> Triggered;
 
-        public InputReader(InputActionAsset inputActions)
+        public InputReader(PlayerInput playerInput)
         {
-            _inputActions = inputActions;
-        }
-
-        public void EnableMap(string name)
-        {
-            foreach (InputActionMap map in _inputActions.actionMaps)
-            {
-                if (map.name == name)
-                {
-                    map.Enable();
-                    map.actionTriggered += OnTriggered;
-                    return;
-                }
-            }
-        }
-
-        public void DisableMap(string name)
-        {
-            foreach (InputActionMap map in _inputActions.actionMaps)
-            {
-                if (map.name == name)
-                {
-                    map.Disable();
-                    map.actionTriggered -= OnTriggered;
-                    return;
-                }
-            }
+            _playerInput = playerInput;
+            _playerInput.onActionTriggered += OnTriggered;
         }
 
         private void OnTriggered(InputAction.CallbackContext context)
         {
             Triggered?.Invoke(context);
+        }
+
+        public void Dispose()
+        {
+            _playerInput.onActionTriggered -= OnTriggered;
         }
     }
 }

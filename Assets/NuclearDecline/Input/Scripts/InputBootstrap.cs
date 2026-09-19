@@ -5,9 +5,10 @@ namespace NuclearDecline.Input
 {
     public class InputBootstrap : MonoBehaviour
     {
-        [SerializeField] private InputActionAsset _inputActions;
+        [SerializeField] private PlayerInput _playerInput;
 
         private InputReader _inputReader;
+        private DeviceSwitcher _deviceSwitcher;
 
         private void Awake()
         {
@@ -16,14 +17,8 @@ namespace NuclearDecline.Input
 
         public void Init()
         {
-            _inputReader = new InputReader(_inputActions);
-
-            foreach (InputActionMap map in _inputActions.actionMaps)
-            {
-                _inputReader.EnableMap(map.name);
-            }
-
-            _inputReader.Triggered += Test;
+            _inputReader = new InputReader(_playerInput);
+            _deviceSwitcher = new DeviceSwitcher(_playerInput);
         }
 
         public void Test(InputAction.CallbackContext context)
