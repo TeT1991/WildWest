@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Utilities;
+using UnityEngine.Windows;
 
 namespace NuclearDecline.Input
 {
@@ -10,65 +12,95 @@ namespace NuclearDecline.Input
         private const string GamepadDeviceName = "Gamepad";
 
         private readonly PlayerInput _playerInput;
+        private readonly IDisposable _buttonPressSubscription;
+
+        private InputDeviceType _currentDevice;
 
         public event Action<InputDeviceType> InputDeviceChanged;
+        public event Action DefaultInputDeviceLost;
 
         public DeviceSwitcher(PlayerInput playerInput)
         {
             _playerInput = playerInput;
+            _currentDevice = InputDeviceType.KeyboardAndMouse;
 
-            _playerInput.onDeviceLost += OnDeviceLost;
-            _playerInput.onControlsChanged += OnControllChanged;
+            _buttonPressSubscription = InputSystem.onAnyButtonPress.Call(OnButtonPressed);
+            InputSystem.onDeviceChange += OnDeviceChange;
         }
 
-        private void NotifyControllChanged(string deviceName)
+        private void NotifyDeviceChanged()
         {
-            if (TryGetInputDeviceTypeBySchemeName(deviceName, out InputDeviceType type))
+            if (_currentDevice == InputDeviceType.None)
             {
-                InputDeviceChanged?.Invoke(type);
-                Debug.Log(type);
+                DefaultInputDeviceLost?.Invoke();
             }
-        }
-
-        private bool TryGetInputDeviceTypeBySchemeName(string schemeName, out InputDeviceType deviceType)
-        {
-            deviceType = InputDeviceType.None;
-
-            switch (schemeName)
+            else
             {
-                case KeyboardAndMouseDeviceName:
-                    deviceType = InputDeviceType.KeyboardAndMouse;
-                    break;
-
-                case GamepadDeviceName:
-                    deviceType = InputDeviceType.Gamepad;
-                    break;
+                InputDeviceChanged?.Invoke(_currentDevice);
             }
 
-            if (deviceType == InputDeviceType.None)
-            {
-                return false;
-            }
-
-            return true;
+            Debug.Log(_currentDevice);
         }
 
-        private void OnDeviceLost(PlayerInput playerInput)
+        private void SetCurrentDevice(InputDeviceType type)
         {
-            _playerInput.user.UnpairDevices();
-            _playerInput.user.ActivateControlScheme(_playerInput.defaultControlScheme).AndPairRemainingDevices();
+            _currentDevice = type;
         }
 
-        private void OnControllChanged(PlayerInput playerInput)
+        private InputDeviceType GetInputDeviceType(InputDevice device)
         {
-            string deviceName = playerInput.currentControlScheme;
-            NotifyControllChanged(deviceName);
+            if (device is Keyboard || device is Mouse) { return InputDeviceType.KeyboardAndMouse; }
+            if (device is Gamepad) { return InputDeviceType.Gamepad; }
+
+            return InputDeviceType.None;
         }
 
         public void Dispose()
         {
-            _playerInput.onDeviceLost -= OnDeviceLost;
-            _playerInput.onControlsChanged -= OnControllChanged;
+            InputSystem.onDeviceChange -= OnDeviceChange;
+            _buttonPressSubscription.Dispose();
+        }
+
+        private void OnButtonPressed(InputControl control)
+        {
+            InputDeviceType type = GetInputDeviceType(control.device);
+
+            if (type == InputDeviceType.None || type == _currentDevice)
+            {
+                return;
+            }
+
+            if (type == InputDeviceType.KeyboardAndMouse && (Keyboard.current == null || Mouse.current == null))
+            {
+                return;
+            }
+
+            SetCurrentDevice(type);
+            NotifyDeviceChanged();
+        }
+
+        private void OnDeviceChange(InputDevice device, InputDeviceChange change)
+        {
+            InputDeviceType type = GetInputDeviceType(device);
+
+            if (change == InputDeviceChange.Removed)
+            {
+                switch (type)
+                {
+                    case InputDeviceType.Gamepad:
+                        SetCurrentDevice(InputDeviceType.KeyboardAndMouse);
+                        break;
+
+                    case InputDeviceType.KeyboardAndMouse:
+                        SetCurrentDevice(InputDeviceType.None);
+                        break;
+
+                    default:
+                        return;
+                }
+
+                NotifyDeviceChanged();
+            }
         }
     }
 }
